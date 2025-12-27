@@ -19,18 +19,20 @@ export class IssuerClient implements IssuerPort {
   }
 
   async authorize(
+    merchantId: string,
     cardToken: string,
     amount: number,
-    currency: string
+    currency: string,
+    expirationDate: string
   ): Promise<IssuerResponseDto> {
 
     try {
       const response = await this.http.post('/payments', {
-        merchantId: 'ACQUIRER_MERCHANT',
+        merchantId,
         amount,
         currency,
         cardToken,
-        expirationDate: '12/26',
+        expirationDate,
       });
 
       return new IssuerResponseDto(

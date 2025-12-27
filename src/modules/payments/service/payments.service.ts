@@ -21,8 +21,16 @@ export class PaymentsService {
       throw new BadRequestException('Amount must be greater than zero');
     }
 
+    // Llamar al issuer para autorizar el pago
+    const issuerResponse = await this.issuerClient.authorize(
+        dto.merchantId,
+        dto.cardToken,
+        dto.amount,
+        dto.currency,
+        dto.expirationDate,
+    );
 
-    const transactionId = this.generateTransactionId();
+    const transactionId = issuerResponse.transactionId;
 
     const transaction = {
       transactionId,
@@ -30,32 +38,11 @@ export class PaymentsService {
       amount: dto.amount,
       currency: dto.currency,
       cardToken: dto.cardToken,
-      status: 'PENDING',
-      createdAt: new Date(),
+      status: issuerResponse.status === 'APPROVED' ? 'COMPLETED' : 'DECLINED',
+      responseCode: issuerResponse.responseCode,
+      createdAt: issuerResponse.createdAt,
       updatedAt: new Date(),
     };
-
-    // Llamar al issuer para autorizar el pago
-    const issuerResponse = await this.issuerClient.authorize(
-      dto.cardToken,
-      dto.amount,
-      dto.currency,
-    );
-
-    console.log('Issuer response:', issuerResponse);
-
-    // Actualizar estado según respuesta del issuer
-    if (issuerResponse.status === 'APPROVED') {
-      transaction.status = 'COMPLETED';
-      transaction['responseCode'] = issuerResponse.responseCode;
-      transaction['issuerTransactionId'] = issuerResponse.transactionId;
-    } else {
-      transaction.status = 'DECLINED';
-      transaction['responseCode'] = issuerResponse.responseCode;
-      transaction['issuerTransactionId'] = issuerResponse.transactionId;
-    }
-
-    transaction.updatedAt = new Date();
 
     this.transactions.set(transactionId, transaction);
 
@@ -96,7 +83,5 @@ export class PaymentsService {
   }
 
 
-  private generateTransactionId(): string {
-    return `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
+
 }
