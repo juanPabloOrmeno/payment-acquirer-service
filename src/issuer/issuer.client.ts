@@ -43,6 +43,23 @@ export class IssuerClient implements IssuerPort {
             );
         } catch (error: any) {
             console.error('Error communicating with issuer:', error.response?.data || error.message);
+            
+            if (error.response) {
+                const errorData = error.response.data;
+                const statusCode = error.response.status;
+                
+                throw new HttpException(
+                    {
+                        message: errorData?.message || 'Error from issuer',
+                        errorCode: errorData?.errorCode,
+                        issuerStatus: statusCode,
+                    },
+                    statusCode === 404 ? HttpStatus.NOT_FOUND : 
+                    statusCode >= 400 && statusCode < 500 ? HttpStatus.BAD_REQUEST : 
+                    HttpStatus.SERVICE_UNAVAILABLE
+                );
+            }
+            
             throw new HttpException(
                 'Issuer service unavailable',
                 HttpStatus.SERVICE_UNAVAILABLE
@@ -62,6 +79,23 @@ export class IssuerClient implements IssuerPort {
             );
         } catch (error: any) {
             console.error('Error fetching payment status from issuer:', error.response?.data || error.message);
+            
+            if (error.response) {
+                const errorData = error.response.data;
+                const statusCode = error.response.status;
+                
+                throw new HttpException(
+                    {
+                        message: errorData?.message || 'Error from issuer',
+                        errorCode: errorData?.errorCode,
+                        issuerStatus: statusCode,
+                    },
+                    statusCode === 404 ? HttpStatus.NOT_FOUND : 
+                    statusCode >= 400 && statusCode < 500 ? HttpStatus.BAD_REQUEST : 
+                    HttpStatus.SERVICE_UNAVAILABLE
+                );
+            }
+            
             throw new HttpException(
                 'Issuer service unavailable',
                 HttpStatus.SERVICE_UNAVAILABLE
