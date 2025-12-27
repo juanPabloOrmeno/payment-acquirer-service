@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  payment-acquirer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: payment-acquirer-service
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - ISSUER_BASE_URL=http://issuing-bank:8080
+      - NODE_ENV=production
+    networks:
+      - payment-network
+    depends_on:
+      - issuing-bank
+    restart: unless-stopped
+
+  issuing-bank:
+    build:
+      context: ../issuingBank
+      dockerfile: Dockerfile
+    container_name: issuing-bank
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    networks:
+      - payment-network
+    restart: unless-stopped
+
+networks:
+  payment-network:
+    driver: bridge
