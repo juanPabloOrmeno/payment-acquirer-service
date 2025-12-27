@@ -1,8 +1,10 @@
 import { Controller, Post, Get, Body, Param, HttpStatus, HttpCode } from '@nestjs/common';
+import { PaymentsService } from '../service/payments.service';
+import { PaymentRequestDto } from '../dto/payment-request.dto';
 
 @Controller('payments')
 export class PaymentsController {
-  constructor() {}
+  constructor(private readonly paymentsService: PaymentsService) {}
 
   /**
    * Procesa un nuevo pago
@@ -10,13 +12,8 @@ export class PaymentsController {
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async processPayment(@Body() paymentRequest: any) {
-    return {
-      message: 'Payment processed successfully',
-      transactionId: '12345',
-      status: 'PENDING',
-      timestamp: new Date(),
-    };
+  async processPayment(@Body() paymentRequest: PaymentRequestDto) {
+    return this.paymentsService.processPayment(paymentRequest);
   }
 
   /**
@@ -25,12 +22,6 @@ export class PaymentsController {
    */
   @Get(':transactionId')
   async getPaymentStatus(@Param('transactionId') transactionId: string) {
-    return {
-      transactionId,
-      status: 'COMPLETED',
-      amount: 5000,
-      currency: 'CLP',
-      timestamp: new Date(),
-    };
+    return this.paymentsService.getPaymentStatus(transactionId);
   }
 }
