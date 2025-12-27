@@ -26,9 +26,11 @@ export class IssuerClient implements IssuerPort {
 
     try {
       const response = await this.http.post('/payments', {
-        cardToken,
+        merchantId: 'ACQUIRER_MERCHANT',
         amount,
         currency,
+        cardToken,
+        expirationDate: '12/26',
       });
 
       return new IssuerResponseDto(
@@ -38,6 +40,7 @@ export class IssuerClient implements IssuerPort {
         new Date(response.data.createdAt)
       );
     } catch (error: any) {
+        console.error('Error communicating with issuer:', error.response?.data || error.message);
       throw new HttpException(
         'Issuer service unavailable',
         HttpStatus.SERVICE_UNAVAILABLE

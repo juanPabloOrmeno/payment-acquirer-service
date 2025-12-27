@@ -21,6 +21,7 @@ export class PaymentsService {
       throw new BadRequestException('Amount must be greater than zero');
     }
 
+
     const transactionId = this.generateTransactionId();
 
     const transaction = {
@@ -40,6 +41,8 @@ export class PaymentsService {
       dto.amount,
       dto.currency,
     );
+
+    console.log('Issuer response:', issuerResponse);
 
     // Actualizar estado según respuesta del issuer
     if (issuerResponse.status === 'APPROVED') {
