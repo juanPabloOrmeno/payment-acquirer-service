@@ -51,7 +51,7 @@ export class PaymentsService {
       status: transaction.status,
       amount: transaction.amount,
       currency: transaction.currency,
-      responseCode: transaction['responseCode'],
+      responseCode: transaction.responseCode,
       createdAt: transaction.createdAt,
       updatedAt: transaction.updatedAt,
     };
@@ -63,22 +63,27 @@ export class PaymentsService {
       throw new BadRequestException('Transaction ID is required');
     }
 
-    const transaction = this.transactions.get(transactionId);
+    // Consultar al issuer para obtener el estado actualizado
+    const issuerResponse = await this.issuerClient.getPaymentStatus(transactionId);
 
-    if (!transaction) {
-      throw new NotFoundException(
-        `Transaction with ID ${transactionId} not found`,
-      );
+    console.log('Issuer response:', issuerResponse);
+
+    // Actualizar caché local si existe
+    const localTransaction = this.transactions.get(transactionId);
+    if (localTransaction) {
+      localTransaction.status = issuerResponse.status === 'APPROVED' ? 'COMPLETED' : 'DECLINED';
+      localTransaction.responseCode = issuerResponse.responseCode;
+      localTransaction.updatedAt = new Date();
     }
 
     return {
-      transactionId: transaction.transactionId,
-      status: transaction.status,
-      amount: transaction.amount,
-      currency: transaction.currency,
-      responseCode: transaction.responseCode || null,
-      createdAt: transaction.createdAt,
-      updatedAt: transaction.updatedAt,
+      transactionId: issuerResponse.transactionId,
+      status: issuerResponse.status === 'APPROVED' ? 'COMPLETED' : 'DECLINED',
+      amount: localTransaction?.amount,
+      currency: localTransaction?.currency,
+      responseCode: issuerResponse.responseCode,
+      createdAt: issuerResponse.createdAt,
+      updatedAt: new Date(),
     };
   }
 

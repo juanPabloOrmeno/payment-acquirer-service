@@ -8,4 +8,6 @@ export interface IssuerPort {
     currency: string,
     expirationDate: string
   ): Promise<IssuerResponseDto>;
+
+  getPaymentStatus(transactionId: string): Promise<IssuerResponseDto>;
 }

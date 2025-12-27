@@ -6,47 +6,66 @@ import { IssuerPort } from 'src/modules/payments/ports/IssuerPort';
 @Injectable()
 export class IssuerClient implements IssuerPort {
 
-  private readonly http: AxiosInstance;
+    private readonly http: AxiosInstance;
 
-  constructor() {
-    this.http = axios.create({
-      baseURL: process.env.ISSUER_BASE_URL || 'http://localhost:8080',
-      timeout: 5000,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-  }
-
-  async authorize(
-    merchantId: string,
-    cardToken: string,
-    amount: number,
-    currency: string,
-    expirationDate: string
-  ): Promise<IssuerResponseDto> {
-
-    try {
-      const response = await this.http.post('/payments', {
-        merchantId,
-        amount,
-        currency,
-        cardToken,
-        expirationDate,
-      });
-
-      return new IssuerResponseDto(
-        response.data.transactionId,
-        response.data.status,
-        response.data.responseCode,
-        new Date(response.data.createdAt)
-      );
-    } catch (error: any) {
-        console.error('Error communicating with issuer:', error.response?.data || error.message);
-      throw new HttpException(
-        'Issuer service unavailable',
-        HttpStatus.SERVICE_UNAVAILABLE
-      );
+    constructor() {
+        this.http = axios.create({
+            baseURL: process.env.ISSUER_BASE_URL || 'http://localhost:8080',
+            timeout: 5000,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
     }
-  }
+
+    async authorize(
+        merchantId: string,
+        cardToken: string,
+        amount: number,
+        currency: string,
+        expirationDate: string
+    ): Promise<IssuerResponseDto> {
+
+        try {
+            const response = await this.http.post('/payments', {
+                merchantId,
+                amount,
+                currency,
+                cardToken,
+                expirationDate,
+            });
+
+            return new IssuerResponseDto(
+                response.data.transactionId,
+                response.data.status,
+                response.data.responseCode,
+                new Date(response.data.createdAt)
+            );
+        } catch (error: any) {
+            console.error('Error communicating with issuer:', error.response?.data || error.message);
+            throw new HttpException(
+                'Issuer service unavailable',
+                HttpStatus.SERVICE_UNAVAILABLE
+            );
+        }
+    }
+
+    async getPaymentStatus(transactionId: string): Promise<IssuerResponseDto> {
+        try {
+            const response = await this.http.get(`/payments/${transactionId}`);
+
+            return new IssuerResponseDto(
+                response.data.transactionId,
+                response.data.status,
+                response.data.responseCode,
+                new Date(response.data.createdAt)
+            );
+        } catch (error: any) {
+            console.error('Error fetching payment status from issuer:', error.response?.data || error.message);
+            throw new HttpException(
+                'Issuer service unavailable',
+                HttpStatus.SERVICE_UNAVAILABLE
+            );
+        }
+    }
 }
