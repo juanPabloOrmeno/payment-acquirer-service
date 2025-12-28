@@ -138,6 +138,23 @@ payment-acquirer-service/
   ```bash
   yarn --version
   ```
+  
+  **Instalación de Yarn:**
+  ```bash
+  # Con npm (si tienes Node.js instalado)
+  npm install -g yarn
+  
+  # En macOS con Homebrew
+  brew install yarn
+  
+  # En Ubuntu/Debian
+  curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+  echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+  sudo apt update && sudo apt install yarn
+  
+  # En Windows con Chocolatey
+  choco install yarn
+  ```
 
 ### Opcionales
 
