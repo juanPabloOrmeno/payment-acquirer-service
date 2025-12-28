@@ -1,0 +1,235 @@
+import { validate } from 'class-validator';
+import { PaymentRequestDto, OperationType } from './payment-request.dto';
+import { MerchantId } from '../enums/merchant.enum';
+
+describe('PaymentRequestDto Validation', () => {
+  let dto: PaymentRequestDto;
+
+  beforeEach(() => {
+    dto = new PaymentRequestDto();
+    dto.merchantId = MerchantId.MERCHANT_001;
+    dto.amount = 50000;
+    dto.currency = 'CLP';
+    dto.cardToken = 'tok_abc123xyz';
+    dto.expirationDate = '12/26';
+    dto.operationType = OperationType.PURCHASE;
+  });
+
+  describe('Valid DTO', () => {
+    it('should pass validation with all valid fields', async () => {
+      const errors = await validate(dto);
+      expect(errors.length).toBe(0);
+    });
+
+    it('should pass validation with optional operationType', async () => {
+      delete dto.operationType;
+      const errors = await validate(dto);
+      expect(errors.length).toBe(0);
+    });
+  });
+
+  describe('merchantId validation', () => {
+    it('should fail when merchantId is empty', async () => {
+      dto.merchantId = '' as any;
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].property).toBe('merchantId');
+      expect(errors[0].constraints?.isNotEmpty).toBeDefined();
+    });
+
+    it('should fail when merchantId is not a valid enum value', async () => {
+      dto.merchantId = 'INVALID_MERCHANT' as any;
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].property).toBe('merchantId');
+      expect(errors[0].constraints?.isEnum).toBeDefined();
+    });
+
+    it('should pass with all valid merchant IDs', async () => {
+      const validMerchants = [
+        MerchantId.MERCHANT_001,
+        MerchantId.MERCHANT_002,
+        MerchantId.MERCHANT_003,
+        MerchantId.MERCHANT_004,
+        MerchantId.MERCHANT_005,
+      ];
+
+      for (const merchantId of validMerchants) {
+        dto.merchantId = merchantId;
+        const errors = await validate(dto);
+        expect(errors.length).toBe(0);
+      }
+    });
+  });
+
+  describe('amount validation', () => {
+    it('should fail when amount is null', async () => {
+      dto.amount = null as any;
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].property).toBe('amount');
+    });
+
+    it('should fail when amount is zero', async () => {
+      dto.amount = 0;
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].property).toBe('amount');
+      expect(errors[0].constraints?.isPositive).toBeDefined();
+    });
+
+    it('should fail when amount is negative', async () => {
+      dto.amount = -1000;
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].property).toBe('amount');
+      expect(errors[0].constraints?.isPositive).toBeDefined();
+    });
+
+    it('should fail when amount is not a number', async () => {
+      dto.amount = 'invalid' as any;
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].property).toBe('amount');
+      expect(errors[0].constraints?.isNumber).toBeDefined();
+    });
+
+    it('should pass with valid positive amounts', async () => {
+      const validAmounts = [1, 100, 1000, 50000, 1000000];
+      for (const amount of validAmounts) {
+        dto.amount = amount;
+        const errors = await validate(dto);
+        expect(errors.length).toBe(0);
+      }
+    });
+  });
+
+  describe('currency validation', () => {
+    it('should fail when currency is empty', async () => {
+      dto.currency = '';
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].property).toBe('currency');
+    });
+
+    it('should fail when currency is null', async () => {
+      dto.currency = null as any;
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].property).toBe('currency');
+    });
+
+    it('should pass with valid currency codes', async () => {
+      const validCurrencies = ['CLP', 'USD', 'EUR', 'BRL'];
+      for (const currency of validCurrencies) {
+        dto.currency = currency;
+        const errors = await validate(dto);
+        expect(errors.length).toBe(0);
+      }
+    });
+  });
+
+  describe('cardToken validation', () => {
+    it('should fail when cardToken is empty', async () => {
+      dto.cardToken = '';
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].property).toBe('cardToken');
+    });
+
+    it('should fail when cardToken is null', async () => {
+      dto.cardToken = null as any;
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].property).toBe('cardToken');
+    });
+
+    it('should pass with valid card tokens', async () => {
+      const validTokens = ['tok_abc123', 'tok_xyz789', 'token_12345678'];
+      for (const token of validTokens) {
+        dto.cardToken = token;
+        const errors = await validate(dto);
+        expect(errors.length).toBe(0);
+      }
+    });
+  });
+
+  describe('expirationDate validation', () => {
+    it('should fail when expirationDate is empty', async () => {
+      dto.expirationDate = '';
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].property).toBe('expirationDate');
+    });
+
+    it('should fail when expirationDate format is invalid', async () => {
+      dto.expirationDate = '13/25'; // Invalid month
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].property).toBe('expirationDate');
+      expect(errors[0].constraints?.matches).toBeDefined();
+    });
+
+    it('should fail when expirationDate has wrong format', async () => {
+      const invalidFormats = ['1/25', '12-26', '2025/12', '12/2025'];
+      for (const format of invalidFormats) {
+        dto.expirationDate = format;
+        const errors = await validate(dto);
+        expect(errors.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('should pass with valid expiration dates', async () => {
+      const validDates = ['01/25', '12/26', '06/30', '11/29'];
+      for (const date of validDates) {
+        dto.expirationDate = date;
+        const errors = await validate(dto);
+        expect(errors.length).toBe(0);
+      }
+    });
+  });
+
+  describe('operationType validation', () => {
+    it('should fail when operationType is invalid', async () => {
+      dto.operationType = 'INVALID_TYPE' as any;
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].property).toBe('operationType');
+      expect(errors[0].constraints?.isEnum).toBeDefined();
+    });
+
+    it('should pass with all valid operation types', async () => {
+      const validTypes = [
+        OperationType.PURCHASE,
+        OperationType.REFUND,
+        OperationType.VOID,
+      ];
+
+      for (const type of validTypes) {
+        dto.operationType = type;
+        const errors = await validate(dto);
+        expect(errors.length).toBe(0);
+      }
+    });
+  });
+
+  describe('Multiple field validation', () => {
+    it('should report multiple validation errors simultaneously', async () => {
+      dto.merchantId = '' as any;
+      dto.amount = -100;
+      dto.currency = '';
+      dto.cardToken = '';
+      dto.expirationDate = '';
+
+      const errors = await validate(dto);
+      expect(errors.length).toBeGreaterThan(3);
+      
+      const properties = errors.map(e => e.property);
+      expect(properties).toContain('merchantId');
+      expect(properties).toContain('amount');
+      expect(properties).toContain('currency');
+      expect(properties).toContain('cardToken');
+      expect(properties).toContain('expirationDate');
+    });
+  });
+});

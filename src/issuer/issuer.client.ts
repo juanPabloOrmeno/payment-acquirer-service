@@ -1,7 +1,7 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
-import { IssuerResponseDto } from 'src/modules/payments/dto/issuer-response.dto';
-import { IssuerPort } from 'src/modules/payments/ports/IssuerPort';
+import { IssuerResponseDto } from '../modules/payments/dto/issuer-response.dto';
+import { IssuerPort } from '../modules/payments/ports/IssuerPort';
 import { AppLoggerService } from '../common/logger/logger.service';
 import { LoggingConstants } from '../common/constants/logging.constants';
 import { getCorrelationId } from '../common/middleware/correlation-id.middleware';
