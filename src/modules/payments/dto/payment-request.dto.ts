@@ -5,13 +5,22 @@ import {
   IsPositive,
   MinLength,
   MaxLength,
+  Matches,
+  IsEnum,
+  IsOptional,
 } from 'class-validator';
+import { MerchantId } from '../enums/merchant.enum';
+
+export enum OperationType {
+  PURCHASE = 'PURCHASE',
+  REFUND = 'REFUND',
+  VOID = 'VOID',
+}
 
 export class PaymentRequestDto {
   @IsNotEmpty({ message: 'Merchant ID is required' })
-  @IsString({ message: 'Merchant ID must be a string' })
-  @MinLength(1, { message: 'Merchant ID cannot be empty' })
-  merchantId: string;
+  @IsEnum(MerchantId, { message: 'Invalid merchant ID. Must be one of: MERCHANT_001, MERCHANT_002, MERCHANT_003, MERCHANT_004, MERCHANT_005' })
+  merchantId: MerchantId;
 
   @IsNotEmpty({ message: 'Amount is required' })
   @IsNumber({}, { message: 'Amount must be a number' })
@@ -30,6 +39,12 @@ export class PaymentRequestDto {
 
   @IsNotEmpty({ message: 'Expiration date is required' })
   @IsString({ message: 'Expiration date must be a string' })
-  @MinLength(1, { message: 'Expiration date cannot be empty' })
+  @Matches(/^(0[1-9]|1[0-2])\/([0-9]{2})$/, {
+    message: 'Expiration date must be in MM/YY format',
+  })
   expirationDate: string;
+
+  @IsOptional()
+  @IsEnum(OperationType, { message: 'Operation type must be PURCHASE, REFUND, or VOID' })
+  operationType?: OperationType = OperationType.PURCHASE;
 }

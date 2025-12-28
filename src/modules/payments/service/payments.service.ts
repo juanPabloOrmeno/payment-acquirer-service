@@ -1,6 +1,8 @@
 import { Injectable, BadRequestException, NotFoundException, HttpException } from '@nestjs/common';
-import { PaymentRequestDto } from '../dto/payment-request.dto';
+import { PaymentRequestDto, OperationType } from '../dto/payment-request.dto';
 import { IssuerClient } from '../../../issuer/issuer.client';
+import { CryptoUtil } from '../../../common/utils/crypto.util';
+import { MerchantValidator } from '../enums/merchant.enum';
 
 @Injectable()
 export class PaymentsService {
@@ -17,9 +19,39 @@ export class PaymentsService {
             );
         }
 
+        // Validar token de tarjeta (PAN tokenizado)
+        const tokenValidation = CryptoUtil.validateCardToken(dto.cardToken);
+        if (!tokenValidation.valid) {
+            throw new BadRequestException(tokenValidation.error);
+        }
+
+        // Validar monto básico
         if (dto.amount <= 0) {
             throw new BadRequestException('Amount must be greater than zero');
         }
+
+        // Validar merchant y límite de monto específico del merchant
+        const amountValidation = MerchantValidator.validateAmount(dto.merchantId, dto.amount);
+        if (!amountValidation.valid) {
+            throw new BadRequestException(amountValidation.message);
+        }
+
+        // Validar límite global de transacción (límite configurable adicional)
+        const transactionAmountValidation = CryptoUtil.validateTransactionAmount(
+            dto.amount,
+            amountValidation.maxAmount || 1000000
+        );
+        if (!transactionAmountValidation.valid) {
+            throw new BadRequestException(transactionAmountValidation.error);
+        }
+
+        // Validar fecha de expiración
+        if (!CryptoUtil.validateExpirationDate(dto.expirationDate)) {
+            throw new BadRequestException('Card has expired or expiration date is invalid');
+        }
+
+        // Hashear el cardToken para seguridad
+        const hashedCardToken = CryptoUtil.hashPAN(dto.cardToken);
 
         // Llamar al issuer para autorizar el pago
         const issuerResponse = await this.issuerClient.authorize(
@@ -37,7 +69,10 @@ export class PaymentsService {
             merchantId: dto.merchantId,
             amount: dto.amount,
             currency: dto.currency,
-            cardToken: dto.cardToken,
+            cardToken: hashedCardToken, // Guardar token hasheado
+            maskedCard: CryptoUtil.maskPAN(dto.cardToken), // Guardar PAN enmascarado
+            expirationDate: dto.expirationDate,
+            operationType: dto.operationType || OperationType.PURCHASE,
             status: issuerResponse.status === 'APPROVED' ? 'COMPLETED' : 'DECLINED',
             responseCode: issuerResponse.responseCode,
             createdAt: issuerResponse.createdAt,
@@ -51,6 +86,8 @@ export class PaymentsService {
             status: transaction.status,
             amount: transaction.amount,
             currency: transaction.currency,
+            maskedCard: transaction.maskedCard,
+            operationType: transaction.operationType,
             responseCode: transaction.responseCode,
             createdAt: transaction.createdAt,
             updatedAt: transaction.updatedAt,
@@ -77,6 +114,8 @@ export class PaymentsService {
                 status: issuerResponse.status === 'APPROVED' ? 'COMPLETED' : 'DECLINED',
                 amount: localTransaction?.amount,
                 currency: localTransaction?.currency,
+                maskedCard: localTransaction?.maskedCard,
+                operationType: localTransaction?.operationType,
                 responseCode: issuerResponse.responseCode,
                 createdAt: issuerResponse.createdAt,
                 updatedAt: new Date(),
