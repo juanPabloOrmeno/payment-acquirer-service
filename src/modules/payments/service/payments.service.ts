@@ -69,8 +69,8 @@ export class PaymentsService {
             merchantId: dto.merchantId,
             amount: dto.amount,
             currency: dto.currency,
-            cardToken: hashedCardToken, // Guardar token hasheado
-            maskedCard: CryptoUtil.maskPAN(dto.cardToken), // Guardar PAN enmascarado
+            cardToken: hashedCardToken,
+            maskedCard: CryptoUtil.maskPAN(dto.cardToken),
             expirationDate: dto.expirationDate,
             operationType: dto.operationType || OperationType.PURCHASE,
             status: issuerResponse.status === 'APPROVED' ? 'COMPLETED' : 'DECLINED',
@@ -100,24 +100,17 @@ export class PaymentsService {
             throw new BadRequestException('Transaction ID is required');
         }
         try {
-
-            const issuerResponse = await this.issuerClient.getPaymentStatus(transactionId);
             const localTransaction = this.transactions.get(transactionId);
-            if (localTransaction) {
-                localTransaction.status = issuerResponse.status === 'APPROVED' ? 'COMPLETED' : 'DECLINED';
-                localTransaction.responseCode = issuerResponse.responseCode;
-                localTransaction.updatedAt = new Date();
-            }
-
+           
             return {
-                transactionId: issuerResponse.transactionId,
-                status: issuerResponse.status === 'APPROVED' ? 'COMPLETED' : 'DECLINED',
+                transactionId: localTransaction.transactionId,
+                status: localTransaction.status === 'APPROVED' ? 'COMPLETED' : 'DECLINED',
                 amount: localTransaction?.amount,
                 currency: localTransaction?.currency,
                 maskedCard: localTransaction?.maskedCard,
                 operationType: localTransaction?.operationType,
-                responseCode: issuerResponse.responseCode,
-                createdAt: issuerResponse.createdAt,
+                responseCode: localTransaction.responseCode,
+                createdAt: localTransaction.createdAt,
                 updatedAt: new Date(),
             };
         } catch (error: any) {
