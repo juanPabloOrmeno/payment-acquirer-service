@@ -73,7 +73,7 @@ export class PaymentsService {
             maskedCard: CryptoUtil.maskPAN(dto.cardToken),
             expirationDate: dto.expirationDate,
             operationType: dto.operationType || OperationType.PURCHASE,
-            status: issuerResponse.status === 'APPROVED' ? 'COMPLETED' : 'DECLINED',
+            status: issuerResponse.status,
             responseCode: issuerResponse.responseCode,
             createdAt: issuerResponse.createdAt,
             updatedAt: new Date(),
@@ -104,7 +104,7 @@ export class PaymentsService {
            
             return {
                 transactionId: localTransaction.transactionId,
-                status: localTransaction.status === 'APPROVED' ? 'COMPLETED' : 'DECLINED',
+                status: localTransaction.status,
                 amount: localTransaction?.amount,
                 currency: localTransaction?.currency,
                 maskedCard: localTransaction?.maskedCard,
