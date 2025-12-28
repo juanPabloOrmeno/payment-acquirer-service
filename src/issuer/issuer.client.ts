@@ -2,19 +2,32 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import { IssuerResponseDto } from 'src/modules/payments/dto/issuer-response.dto';
 import { IssuerPort } from 'src/modules/payments/ports/IssuerPort';
+import { AppLoggerService } from '../common/logger/logger.service';
+import { LoggingConstants } from '../common/constants/logging.constants';
+import { getCorrelationId } from '../common/middleware/correlation-id.middleware';
 
 @Injectable()
 export class IssuerClient implements IssuerPort {
 
     private readonly http: AxiosInstance;
+    private readonly context = 'IssuerClient';
 
-    constructor() {
+    constructor(private readonly logger: AppLoggerService) {
         this.http = axios.create({
             baseURL: process.env.ISSUER_BASE_URL || 'http://localhost:8080',
             timeout: 5000,
             headers: {
                 'Content-Type': 'application/json',
             },
+        });
+
+        // Interceptor para agregar correlationId a requests salientes
+        this.http.interceptors.request.use((config) => {
+            const correlationId = getCorrelationId();
+            if (correlationId) {
+                config.headers[LoggingConstants.CORRELATION_ID_HEADER] = correlationId;
+            }
+            return config;
         });
     }
 
@@ -25,14 +38,20 @@ export class IssuerClient implements IssuerPort {
         currency: string,
         expirationDate: string
     ): Promise<IssuerResponseDto> {
+        const requestData = { merchantId, amount, currency, cardToken, expirationDate };
+        
+        this.logger.logHttpRequest('POST', '/payments', this.context, { 
+            merchantId, 
+            amount, 
+            currency 
+        });
 
         try {
-            const response = await this.http.post('/payments', {
-                merchantId,
-                amount,
-                currency,
-                cardToken,
-                expirationDate,
+            const response = await this.http.post('/payments', requestData);
+
+            this.logger.logHttpResponse('POST', '/payments', response.status, this.context, {
+                transactionId: response.data.transactionId,
+                status: response.data.status,
             });
 
             return new IssuerResponseDto(
@@ -42,7 +61,15 @@ export class IssuerClient implements IssuerPort {
                 new Date(response.data.createdAt)
             );
         } catch (error: any) {
-            console.error('Error communicating with issuer:', error.response?.data || error.message);
+            this.logger.error(
+                `Error communicating with issuer: ${error.message}`,
+                error.stack,
+                this.context,
+                { 
+                    status: error.response?.status,
+                    errorData: error.response?.data 
+                }
+            );
             
             if (error.response) {
                 const errorData = error.response.data;
@@ -68,8 +95,15 @@ export class IssuerClient implements IssuerPort {
     }
 
     async getPaymentStatus(transactionId: string): Promise<IssuerResponseDto> {
+        this.logger.logHttpRequest('GET', `/payments/${transactionId}`, this.context);
+
         try {
             const response = await this.http.get(`/payments/${transactionId}`);
+
+            this.logger.logHttpResponse('GET', `/payments/${transactionId}`, response.status, this.context, {
+                transactionId: response.data.transactionId,
+                status: response.data.status,
+            });
 
             return new IssuerResponseDto(
                 response.data.transactionId,
@@ -78,7 +112,16 @@ export class IssuerClient implements IssuerPort {
                 new Date(response.data.createdAt)
             );
         } catch (error: any) {
-            console.error('Error fetching payment status from issuer:', error.response?.data || error.message);
+            this.logger.error(
+                `Error fetching payment status from issuer: ${error.message}`,
+                error.stack,
+                this.context,
+                { 
+                    transactionId,
+                    status: error.response?.status,
+                    errorData: error.response?.data 
+                }
+            );
             
             if (error.response) {
                 const errorData = error.response.data;
